@@ -1,0 +1,20 @@
+nodetool tpstats :
+replication happens by 3 ways:
+- write consistency,
+- read consistency (trigger read repair),
+- ant-entropy repair(manually done: i.e. nodetool repair)
+: incremental repair happens means : if one node ws earlier repaired it will continue from that spot next time
+
+
+sstablemetadata <sstavle path> : to describe the metadata
+nodetool refresh: will refresh all the sstables, i.e. if we have taken a backup of sstables and need to restore the datatype
+nodetool move <token>
+nodetool rebuild --dc1  : when a new dc is added to the cluster
+nodetool removenode <nodeIP> : to remove a node gracefully
+nodetool decomission <nodeip> : to remove the node out of the cluster
+nodetool assasinate <nodeip> :
+
+
+HEalth check:
+nodetool tpstats  : thread pool stats of all compaction threads etc.
+nodetool cfstats : column family stts

@@ -1,0 +1,116 @@
+Day 3:
+
+
+TOKENS:
+- tells how much ownership
+
+VNODES:
+- represents
+
+PARTITION:
+
+
+________________  CASSANDRA ARCHITECTURE _______________________
+
+A cassandra cluster is represented by DC and racks:
+
+1. RACk- when two nodes are connected physically or via same router
+2. DC - a set of rack
+
+C* tries to store copies of data in multiple DC
+
+3. Gossip Protocol - each nodes keeps track of all other VNODES
+the gossiper runs for every one second
+
+4. SNITCH: they gether info about the c* topology, so that C8 can route info efficiently
+Nodes don't have the knowledge to check which other nodes are nearer in the network.
+Hence snitches do that
+
+5. RING BASED TOPOLOGY
+
+- Each node in a ring is assigned one or more ranges of data described by a tokens
+A ring is represented by multiple tokens, and these tokens have data
+
+FOR WRITING DATA:
+- hashing algorith called MURMER PArtitioner is used which is used to add new data to any token
+- so when data is new --> it gets assigned to a node by using a hash algorithm--> MURMUR partition using the partition key (any one column is made primary key)--> a unique token is generated --> this tells where to store the data
+
+the partition key is compared to the token value to find at which node the data is stored
+
+- so when one node is there = 256 tokens with all Data ---> add one more node with 256 tokens then data is just sliced and moved to this new node (and it is easy to do so because data is sorted and stored in c*)
+
+- TOKEN : it a 64bit integer used to identify each partition and can be from
+256 tokens are assigned as default
+
+
+6. DC - collection of Nodes
+7. CLUSTER - collection of DC's
+
+8. PARTITIONER: it decies which data should goto which node by generating the token numbered
+- default one is Murmer3Partitioner
+
+
+9. REPLICATION STRATEGIES:
+ - SimpleStrategy : places replicas around the consecutive Nodes around the RING
+ - NetworkTopologyStrategy
+
+
+10. CONSISTENCY LEVELS:
+ANY - the acknowledgment by ANY of the replicas is required
+1 - by default, means if we do a write/read, then acknowledgment by only 1 replica (the OWNER) is required  --> results in randomness for ex. if we read a data, then we would wait for only 1 copy of data from only 1 replica
+which could result in outdated Data
+2 - means if we do a write/read, then acknowledgment by only 2 replica is required
+
+For exm: if we have 1 cluster with replication_factor of 3
+write         read    consistency
+ 1             1        bad  : means read client will wait for only 1 replica to give back data (which could be old data)
+ 1             2        bad  : means read client will wait for only 2 replica to give back data (which could be old data)
+ 1             3        STRONGER : means read client will wait for 3 replica to give back data (in which two could be old data) and then this will initiate a "nodetool repair"
+ 2             1        bad
+ 2             2        STRONGER: because this means with replication_factor=3 atleast one node would have latest data while reading
+ 3             1        STRONGER
+ all          any
+ QUORUM       QUORUM
+hence, num. of Read+Write consistency > R.Factor
+
+this all results in READ-Repair (which is an automatic repair that c* does when the consistency isn't matched uring the acknowledgemtn)
+
+
+11. QUORUM:
+ (N/2)+1  --> where N= replication_factor
+
+
+12. ANTI_ENTROPY REPAIR - manual repair
+13. CASSANDRA Node has: in-memory (JVM)  has Memtables, Key Caches, Row Cahes and Counter Caches
+ --- in disk : commit logs, sstables(sorted string tables), hints
+
+14. HINTS: if a node goes down just during a write operation, the coordinator node will store the missed writes for a period of time. This is know as hints, and once the down node comes up, then hints are written into it.
+
+15. TTL - time to live  : allows automatic purges
+
+
+
+
+
+Commands:
+
+
+
+To create multi-node multi-dc cluster:
+1. sudo service cassandra stop
+2. rm -rf /var/lib/cassandra/data/system/*
+3. edit the cassandra.yaml in /etc/cassandra.yaml to change ClusterName
+4. in rackdc.properties you can edit the DC name or rack
+5. check logs
+
+nodetool getendpoints <keyspace> <tablename> <partitionkeyValue>  :  will tell where the particular data is stored\
+nodetool ring : will tell the which ip has which token id;
+select token(user_id),email from userstesting ;  : will tell the token id for that data
+apt-get install cassandra-tools  --> install this o get sstabledump command
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+
+consistency decides which node --> goes to that node --> patitioner decides which token range --> and then it checkes in row cache and then writes
+
+So c* writes only lin 1 node and then replicates it

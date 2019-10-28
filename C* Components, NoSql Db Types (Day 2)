@@ -1,0 +1,156 @@
+Day 2:
+
+Types of NOSQL db:
+
+1. Key-Value type:  Unit of storage is a key-valur pair i.e. at row level :  Redis, Memcached
+2. Document oriented: The unit of storage is a Record (used when you want to read data mainly): eg, MongoDc, CouchDb, DynamoDb
+3. Column oriented: mainly for write heavy operations. (unit of storage is key-value at column level ): Cassandra, HBase
+4. Graph-oriented: Neo4j,
+
+
+Cassandra cluster can be split across many geographical locations (data centers)
+- this helps in HADR : high availability disaster recovery
+
+
+RING BAsed TOPOLOGY:
+- data gets arranged in a circular fashion
+
+Different strategies for Data replication:
+1. Simple strategy: means that replication happens in neighbouring nodes
+- million of writes/secs
+
+2. network TOPOLOGY
+
+
+
+
+Commands:
+- service cassandra start
+- nodetool status : tells the admin statuses (num of nodes) of the cassandra nodes/cluster.
+- /var/lib/cassandra : this is where all data gets stored
+- /var/log/cassandra: this has 'system.log' which tells cassandra logs
+- nodetool status :
+    UP : up and normal
+
+- DESCRIBE keyspaces;
+- use <keyspace_name>
+
+- cqlsh
+
+- CREATE KEYSPACE testkeyspace WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}  AND durable_writes = true;
+- CREATE TABLE testkeyspace.users(user_id varchar, age int, email varchar, city varchar, PRIMARY KEY (user_id));
+- use testkeyspace;
+- desc users;
+        CREATE TABLE testkeyspace.users (
+        user_id text PRIMARY KEY,
+        age int,
+        city text,
+        email text
+        ) WITH bloom_filter_fp_chance = 0.01
+        AND caching = {'keys': 'ALL', 'rows_per_partition': 'NONE'}
+        AND comment = ''
+        AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold': '32', 'min_threshold': '4'}
+        AND compression = {'chunk_length_in_kb': '64', 'class': 'org.apache.cassandra.io.compress.LZ4Compressor'}
+        AND crc_check_chance = 1.0
+        AND dclocal_read_repair_chance = 0.1
+        AND default_time_to_live = 0
+        AND gc_grace_seconds = 864000
+        AND max_index_interval = 2048
+        AND memtable_flush_period_in_ms = 0
+        AND min_index_interval = 128
+        AND read_repair_chance = 0.0
+        AND speculative_retry = '99PERCENTILE';
+
+
+- select * from users;
+- TRUNCATE users;  : will clear it
+
+- INSERT INTO users(user_id, age, email, city) VALUES ('jsmith3',32,'john.smith@example.com','Dallas');
+
+- nodetool flush
+
+
+Components of Cassandra:
+
+1. CQL: the only way to communicate to CASSANDRA
+2. node: where the data is stored / cassandra is installed
+3. DC: collection of nodes
+4, CLUSTER: group of decentralised
+5. KeySPACE: outermost container for data in c*
+      --> replication factor : num of machines that will received replics Data
+      --> replication startegy
+      --> keyspace name
+      --> durable_writes = true : if this is false then it means data won't be stored in disk
+
+
+
+
+
+
+FLUSH to DISK:
+So cassandra actually wont directly store it on disk, it will be just in the memory
+to forcibly move data to disk, we use "nodetool flush"  which will result in mc-X files inside /var/lib/cassandra/data/<keyspace_name>
+
+C* doesn't directly commit to disk, but in memory(volatile memory), and this auto-flush is based on:
+1.time
+2.size
+3. no. of msgs
+
+ssTables files: any data that is "flushed" from memory to disk , these are immutable
+: every sstable is numbered as mc-'X'
+: newer the sstable, it will have only the latest newer values
+: data is stored in for Tree data structure
+
+
+
+MINOR COMPACTION: (Flush to DISk - automated)
+- default is 4, i.e. when 4 entries are created in sstables only then C* compacts it into one file in sstables
+- not only for read optimization but also for storage management
+- runs for every 1 second
+
+REPLICATION FACTOR:
+- to keep a copy of Data
+- so as to improve performance of c*
+
+WRITE:
+- can be random
+- when writes happen C* will store the data in memory in data structure called MemeTable
+- during write asynchronously C* writes into a commit log (raw data)
+
+
+UPDATES:
+in c* they aren't soft-deletes(i.e. in RDBMS it will actually delete a value) but known as "marked for updation" (this means that in sstable older value would still be tell,
+and even though we have told it to delete logically it won't delete it in the sstable)
+- this results in tombstones i.e. the data will be there but it is useless
+
+MAJOR COMPACTION:
+this is done to clean tombstones
+
+READ OPERATION:
+- read will be done from the cache
+-
+- three types of cache:
+1. Key-cache: it's an index of which primary key is available in which sstable file/partition/node, not really a cache
+2. Row cache : LRU algorithm (Least Recently used): will have recently used ops. i.e. recently read rows, first C* checks here during a hit, if there is a miss then C* will update the row cache with the missed data
+3. Counter cache: dedicated to keeping any counter-related data
+
+
+
+for read --> first check Key cache (c* will come to know if it is in row cache or which sstable, or if it recently written ) --> goes to row cache or ssTable
+
+for write --> data is written in memtable and aysnchd, into commit log & update the key-cache --> flush --> sstable
+
+
+Bloom Filter search: is used by C* to read data
+
+
+SEED_Provider: The ip which help to bootstrap :  The seed node designation has no purpose other than bootstrapping the gossip process for new nodes joining the cluster
+
+
+listen_address: for other to listen to c*
+rpc_address: for internal (remote procedure calls)
+
+
+TOKENS: represents the ownership, similar to shares, so more the tokens more the ownership
+
+replication_factor: means if it is 2, then data% is 200%, if it's 3 then 300% and then ownership gets divided by this number

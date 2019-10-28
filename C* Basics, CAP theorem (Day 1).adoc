@@ -1,0 +1,45 @@
+
+------------------   CASSANDRA BASICS   -------------------
+- It is an open source,
+- distributed (because of it's nodes),
+- decentralized (i.e. no node is a master, so everyone is a part of the network but no one is the master) DB.
+
+- Cassandra is the only decentralised NoSQL Db, highly scalable, available, fault tolerant, tunable consistent
+- peer to peer architecture with gossip protocol
+
+Google bigtable - HBase is the open-source
+
+
+------------------------------------------------------------------------------------------------------------------
+
+                RDBMS:                                                                    NoSQL
+-->  strict schema has to be defined                        --> Schema free which means dynamic schema can be defined for each record
+--> not distributed                                         --> can be natively distributed
+--> hence it is not scalable                                --> hence it is scalable  (for anything to be scalable we should be able to distribute them)
+--> larger data, lesser performance                         --> here more the data, more the performance that is because we will create more nodes and parallel processing
+--> ACID                                                    --> CAP
+(because of this C: (consistency) RDBMS cannot be distributed since it has to read date and give proper results)
+
+Atomicity,
+consistency, - read op. should give expected data
+Isolation
+Durability
+
+
+
+
+CAP Theorem:
+
+C - consistency : Every read receives the most recent write
+A - availability : Every request receives a (non-error) response – without guarantee that it contains the most recent write
+P - partition tolerance: The system continues to operate despite data being dropped (or delayed) by the network between nodes
+
+
+scenarios                                        C                    A                P
+1 system with 100% data                         100%                  no               no
+2 systems with 50% each data                  reduced                 no               yep
+4 systems where 2 are replica of others     reduced further           yes              yep
+n num, of systems with replicas                  bad               highly available     yep
+
+
+So, more the partitions will help in higher availability, and more scalability BUT this will reduce consistency

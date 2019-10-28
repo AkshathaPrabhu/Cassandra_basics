@@ -1,0 +1,67 @@
+CASSANDRA Day 4:
+
+1. sstabledump <ssTable path> : will give th eo/p pf sstable in json format
+2. rolling updates: in a distributed system, bring down one system and then update it and then the other nodes
+
+
+INSERT into employees (user_id,age,city,email) VALUES('reshma_2',24,'banglore','hey@hey.com') USING TTL 30000;
+select TTL(age) , user_id from employees;
+
+
+COUNTER CACHE:
+'counter' is like a datatype, but it's a cache because coounters  would be very small memory consuming value. Hence for faster reads.
+But now, in cassandra all cacches are actually saved in disk in /var/lib/cassandra/saved_caches and this is because if the node goes down and comes up, it would be easier to restart that nodes
+
+
+
+
+DOES CASSANDRA SHARE anything between the nodes:
+                           node1                                                       node2
+row-cache        will be based on data in it's disk      will be based on data in node2 disk hence not same as node1
+counter CACHE       same as above
+key-CACHE        should be same as other nodes because it tells which data is in which token
+
+
+key-cache is what the node gets from the seed node, during bootstraping, so when it's down it will get this from other nodes after coming up.
+But row-cahce and counter-cache it will build on it's own.
+
+So no, nothing is shared but it they could be samed.
+
+
+
+
+- desc users;
+        CREATE TABLE testkeyspace.users (
+        user_id text PRIMARY KEY,
+        age int,
+        city text,
+        email text
+        ) WITH bloom_filter_fp_chance = 0.01
+        AND caching = {'keys': 'ALL', 'rows_per_partition': 'NONE'}
+        AND comment = ''
+        AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold': '32', 'min_threshold': '4'}
+        // :  max_threshold tells after this value the sstable gets locked, min_threshold: this is the value after which sstables get compacted, minimum can be 2
+        AND compression = {'chunk_length_in_kb': '64', 'class': 'org.apache.cassandra.io.compress.LZ4Compressor'}
+        // compression is used to better the performance and reduce memory usage
+        AND crc_check_chance = 1.0
+        AND dclocal_read_repair_chance = 0.1
+        AND default_time_to_live = 0
+        AND gc_grace_seconds = 864000
+        AND max_index_interval = 2048
+        AND memtable_flush_period_in_ms = 0
+        AND min_index_interval = 128
+        AND read_repair_chance = 0.0
+        AND speculative_retry = '99PERCENTILE';
+
+
+INCREMENTAL backups: can be made true
+SNAPSHOTS - nodetool snapshot <keyspace_name> will take a snapshot of sstables and if node goes down, then paste this snapshot into the /var/lib/cassandra/data folder and then nodetool refresh
+
+________________- DATA MODELLING: ___________________
+
+
+a compound primary key is (partitioning key, clustering key)
+wherein,
+partitioning key - will tell in which partition the data will be stored i.e by the token
+ example: PRIMARY KEY ((column1, column2), clustering key)
+ (column1, column2) = compound partitioning key
